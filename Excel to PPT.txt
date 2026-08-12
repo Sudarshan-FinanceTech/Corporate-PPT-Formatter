@@ -1,0 +1,422 @@
+Option Explicit
+
+Sub Create_Client_Portfolio_PPT()
+
+    '=========================================================
+    ' Excel → PowerPoint Client Portfolio Generator - V1
+    ' One Excel row = One PowerPoint slide
+    '=========================================================
+
+    Dim ws As Worksheet
+    Dim lastRow As Long
+    Dim i As Long
+    
+    Dim pptApp As Object
+    Dim pptPres As Object
+    Dim pptSlide As Object
+    
+    Dim clientName As String
+    Dim industry As String
+    Dim annualRevenue As Double
+    Dim yoyGrowth As Double
+    Dim satisfaction As Double
+    Dim contractValue As Double
+    Dim status As String
+    Dim keyContact As String
+    
+    Dim totalRevenue As Double
+    Dim revenueContribution As Double
+    
+    Dim pptPath As String
+    
+    '---------------------------------------------------------
+    ' SETTINGS
+    '---------------------------------------------------------
+    
+    Set ws = ThisWorkbook.Worksheets("Data")
+    
+    'Find last row based on Client Name column
+    lastRow = ws.Cells(ws.Rows.Count, "A").End(xlUp).Row
+    
+    If lastRow < 2 Then
+        MsgBox "No client data found.", vbExclamation
+        Exit Sub
+    End If
+    
+    '---------------------------------------------------------
+    ' CALCULATE TOTAL PORTFOLIO REVENUE
+    '---------------------------------------------------------
+    
+    totalRevenue = Application.WorksheetFunction.Sum(ws.Range("C2:C" & lastRow))
+    
+    If totalRevenue = 0 Then
+        MsgBox "Total Annual Revenue is zero. Please check the data.", vbExclamation
+        Exit Sub
+    End If
+    
+    '---------------------------------------------------------
+    ' OPEN POWERPOINT
+    '---------------------------------------------------------
+    
+    On Error Resume Next
+    Set pptApp = GetObject(, "PowerPoint.Application")
+    
+    If pptApp Is Nothing Then
+        Set pptApp = CreateObject("PowerPoint.Application")
+    End If
+    
+    On Error GoTo 0
+    
+    pptApp.Visible = True
+    
+    'Create new presentation
+    Set pptPres = pptApp.Presentations.Add
+    
+    '16:9 widescreen
+    pptPres.PageSetup.SlideSize = 15
+    
+    '---------------------------------------------------------
+    ' CREATE ONE SLIDE PER EXCEL ROW
+    '---------------------------------------------------------
+    
+    For i = 2 To lastRow
+        
+        'Read Excel values
+        clientName = Trim(ws.Cells(i, "A").Value)
+        industry = Trim(ws.Cells(i, "B").Value)
+        
+        annualRevenue = Val(ws.Cells(i, "C").Value)
+        yoyGrowth = Val(ws.Cells(i, "D").Value)
+        satisfaction = Val(ws.Cells(i, "E").Value)
+        contractValue = Val(ws.Cells(i, "F").Value)
+        
+        status = Trim(ws.Cells(i, "G").Value)
+        keyContact = Trim(ws.Cells(i, "H").Value)
+        
+        'Calculate revenue contribution
+        revenueContribution = annualRevenue / totalRevenue
+        
+        '-----------------------------------------------------
+        ' CREATE BLANK SLIDE
+        '-----------------------------------------------------
+        
+        Set pptSlide = pptPres.Slides.Add( _
+                        pptPres.Slides.Count + 1, _
+                        12)
+        
+        '-----------------------------------------------------
+        ' BACKGROUND
+        '-----------------------------------------------------
+        
+        pptSlide.Background.Fill.ForeColor.RGB = RGB(255, 255, 255)
+        
+        '-----------------------------------------------------
+        ' HEADER BAR
+        '-----------------------------------------------------
+        
+        AddRectangle pptSlide, _
+            0, 0, 13.333, 0.65, _
+            RGB(31, 45, 105), _
+            RGB(31, 45, 105)
+        
+        'Client Name
+        AddText pptSlide, _
+            clientName, _
+            0.48, 0.18, 6.5, 0.35, _
+            24, True, RGB(255, 255, 255)
+        
+        'Industry tag
+        AddRectangle pptSlide, _
+            10.65, 0.17, 1.95, 0.34, _
+            RGB(255, 190, 45), _
+            RGB(255, 190, 45)
+        
+        AddText pptSlide, _
+            industry, _
+            10.65, 0.22, 1.95, 0.22, _
+            10, True, RGB(31, 45, 105), _
+            True
+        
+        '-----------------------------------------------------
+        ' STATUS + CONTACT
+        '-----------------------------------------------------
+        
+        AddRectangle pptSlide, _
+            0.42, 0.83, 0.75, 0.28, _
+            RGB(42, 190, 96), _
+            RGB(42, 190, 96)
+        
+        AddText pptSlide, _
+            status, _
+            0.42, 0.88, 0.75, 0.16, _
+            9, True, RGB(255, 255, 255), _
+            True
+        
+        AddText pptSlide, _
+            "Key Contact: " & keyContact, _
+            1.35, 0.86, 3.5, 0.25, _
+            10, False, RGB(100, 110, 145)
+        
+        '-----------------------------------------------------
+        ' KPI CARD 1 - ANNUAL REVENUE
+        '-----------------------------------------------------
+        
+        AddKpiCard pptSlide, _
+            0.42, 1.22, 2.55, 1.35, _
+            "ANNUAL REVENUE", _
+            FormatCurrencyUSD(annualRevenue), _
+            RGB(255, 190, 45)
+        
+        '-----------------------------------------------------
+        ' KPI CARD 2 - YOY GROWTH
+        '-----------------------------------------------------
+        
+        AddKpiCard pptSlide, _
+            3.16, 1.22, 2.55, 1.35, _
+            "YOY GROWTH", _
+            FormatPercent(yoyGrowth, 1), _
+            RGB(42, 190, 96)
+        
+        '-----------------------------------------------------
+        ' KPI CARD 3 - SATISFACTION
+        '-----------------------------------------------------
+        
+        AddKpiCard pptSlide, _
+            5.90, 1.22, 2.55, 1.35, _
+            "SATISFACTION SCORE", _
+            Format(satisfaction, "0.0") & " / 10", _
+            RGB(31, 45, 105)
+        
+        '-----------------------------------------------------
+        ' CONTRACT VALUE
+        '-----------------------------------------------------
+        
+        AddRectangle pptSlide, _
+            0.42, 2.82, 4.10, 0.85, _
+            RGB(31, 45, 105), _
+            RGB(31, 45, 105)
+        
+        AddText pptSlide, _
+            "CONTRACT VALUE", _
+            0.68, 3.03, 2.2, 0.20, _
+            9, True, RGB(220, 225, 245)
+        
+        AddText pptSlide, _
+            FormatCurrencyUSD(contractValue), _
+            0.68, 3.25, 3.2, 0.35, _
+            21, True, RGB(255, 255, 255)
+        
+        '-----------------------------------------------------
+        ' REVENUE CONTRIBUTION
+        '-----------------------------------------------------
+        
+        AddRectangle pptSlide, _
+            4.75, 2.82, 7.80, 0.85, _
+            RGB(250, 250, 252), _
+            RGB(235, 235, 240)
+        
+        AddText pptSlide, _
+            "REVENUE CONTRIBUTION TO PORTFOLIO", _
+            5.02, 3.00, 3.8, 0.20, _
+            9, True, RGB(100, 110, 145)
+        
+        'Grey background bar
+        AddRectangle pptSlide, _
+            5.02, 3.27, 6.85, 0.17, _
+            RGB(228, 230, 238), _
+            RGB(228, 230, 238)
+        
+        'Contribution bar
+        AddRectangle pptSlide, _
+            5.02, 3.27, _
+            6.85 * revenueContribution, 0.17, _
+            RGB(31, 45, 105), _
+            RGB(31, 45, 105)
+        
+        AddText pptSlide, _
+            FormatPercent(revenueContribution, 1) & " of total portfolio revenue", _
+            5.02, 3.52, 3.8, 0.20, _
+            8.5, False, RGB(100, 110, 145)
+        
+        '-----------------------------------------------------
+        ' FOOTER
+        '-----------------------------------------------------
+        
+        AddRectangle pptSlide, _
+            0, 6.95, 13.333, 0.35, _
+            RGB(31, 45, 105), _
+            RGB(31, 45, 105)
+        
+        AddText pptSlide, _
+            "Confidential  |  Client Portfolio Review", _
+            0.48, 7.03, 3.2, 0.15, _
+            7.5, False, RGB(220, 225, 245)
+        
+        AddText pptSlide, _
+            "Slide " & (pptPres.Slides.Count) & " | " & Format(Date, "mmm yyyy"), _
+            10.5, 7.03, 2.3, 0.15, _
+            7.5, False, RGB(220, 225, 245), _
+            True
+        
+    Next i
+    
+    '---------------------------------------------------------
+    ' SAVE POWERPOINT
+    '---------------------------------------------------------
+    
+    pptPath = ThisWorkbook.Path & "\Client_Portfolio_Presentation.pptx"
+    
+    'Delete existing file if present
+    If Dir(pptPath) <> "" Then
+        Kill pptPath
+    End If
+    
+    pptPres.SaveAs pptPath
+    
+    MsgBox _
+        "Presentation created successfully!" & vbCrLf & vbCrLf & _
+        "Slides created: " & pptPres.Slides.Count & vbCrLf & _
+        "Saved at:" & vbCrLf & pptPath, _
+        vbInformation, _
+        "Client Portfolio PPT Generator"
+
+End Sub
+
+
+'=============================================================
+' ADD RECTANGLE
+'=============================================================
+
+Sub AddRectangle( _
+    ByVal sld As Object, _
+    ByVal left As Double, _
+    ByVal top As Double, _
+    ByVal width As Double, _
+    ByVal height As Double, _
+    ByVal fillColor As Long, _
+    ByVal lineColor As Long)
+
+    Dim shp As Object
+    
+    Set shp = sld.Shapes.AddShape( _
+                1, _
+                left * 72, _
+                top * 72, _
+                width * 72, _
+                height * 72)
+    
+    shp.Fill.ForeColor.RGB = fillColor
+    shp.Line.ForeColor.RGB = lineColor
+    shp.Line.Visible = False
+
+End Sub
+
+
+'=============================================================
+' ADD TEXT
+'=============================================================
+
+Sub AddText( _
+    ByVal sld As Object, _
+    ByVal txt As String, _
+    ByVal left As Double, _
+    ByVal top As Double, _
+    ByVal width As Double, _
+    ByVal height As Double, _
+    ByVal fontSize As Double, _
+    ByVal bold As Boolean, _
+    ByVal fontColor As Long, _
+    Optional ByVal centerAlign As Boolean = False)
+
+    Dim shp As Object
+    
+    Set shp = sld.Shapes.AddTextbox( _
+                1, _
+                left * 72, _
+                top * 72, _
+                width * 72, _
+                height * 72)
+    
+    With shp.TextFrame2
+    
+        .TextRange.Text = txt
+        
+        .TextRange.Font.Size = fontSize
+        .TextRange.Font.Name = "Aptos"
+        .TextRange.Font.Fill.ForeColor.RGB = fontColor
+        
+        If bold Then
+            .TextRange.Font.Bold = True
+        Else
+            .TextRange.Font.Bold = False
+        End If
+        
+        If centerAlign Then
+            .TextRange.ParagraphFormat.Alignment = 2
+        Else
+            .TextRange.ParagraphFormat.Alignment = 1
+        End If
+        
+        .VerticalAnchor = 3
+        
+        .MarginLeft = 0
+        .MarginRight = 0
+        .MarginTop = 0
+        .MarginBottom = 0
+        
+    End With
+
+End Sub
+
+
+'=============================================================
+' ADD KPI CARD
+'=============================================================
+
+Sub AddKpiCard( _
+    ByVal sld As Object, _
+    ByVal left As Double, _
+    ByVal top As Double, _
+    ByVal width As Double, _
+    ByVal height As Double, _
+    ByVal title As String, _
+    ByVal value As String, _
+    ByVal accentColor As Long)
+
+    'Card
+    AddRectangle sld, _
+        left, top, width, height, _
+        RGB(255, 255, 255), _
+        RGB(235, 235, 240)
+    
+    'Accent line
+    AddRectangle sld, _
+        left, top, width, 0.05, _
+        accentColor, _
+        accentColor
+    
+    'Title
+    AddText sld, _
+        title, _
+        left + 0.25, top + 0.28, width - 0.5, 0.20, _
+        8.5, True, RGB(100, 110, 145)
+    
+    'Value
+    AddText sld, _
+        value, _
+        left + 0.25, top + 0.67, width - 0.5, 0.40, _
+        21, True, _
+        RGB(40, 42, 65)
+
+End Sub
+
+
+'=============================================================
+' FORMAT USD
+'=============================================================
+
+Function FormatCurrencyUSD(ByVal amount As Double) As String
+
+    FormatCurrencyUSD = "$" & Format(amount, "#,##0")
+
+End Function
