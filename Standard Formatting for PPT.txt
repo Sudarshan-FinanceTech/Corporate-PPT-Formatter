@@ -1,0 +1,168 @@
+Option Explicit
+
+Sub FormatCorporatePPT()
+
+    Dim pres As Presentation
+    Dim sld As Slide
+    Dim shp As Shape
+    Dim i As Long
+    
+    Set pres = ActivePresentation
+    
+    '-----------------------------------------
+    ' 1. Set presentation to 16:9
+    '-----------------------------------------
+    With pres.PageSetup
+        .SlideWidth = 13.333 * 72
+        .SlideHeight = 7.5 * 72
+    End With
+    
+    '-----------------------------------------
+    ' 2. Process every slide
+    '-----------------------------------------
+    For Each sld In pres.Slides
+        
+        'White background
+        sld.FollowMasterBackground = False
+        sld.Background.Fill.ForeColor.RGB = RGB(255, 255, 255)
+        
+        For Each shp In sld.Shapes
+            
+            'Skip pictures and charts
+            If shp.Type <> msoPicture And shp.Type <> msoChart Then
+                
+                '-----------------------------------------
+                ' Text formatting
+                '-----------------------------------------
+                If shp.HasTextFrame Then
+                    
+                    If shp.TextFrame.HasText Then
+                        
+                        With shp.TextFrame.TextRange.Font
+                            .Name = "Aptos"
+                            .Color.RGB = RGB(55, 55, 55)
+                        End With
+                        
+                        'Identify likely slide titles
+                        If shp.Top < 100 And shp.Height < 100 Then
+                            
+                            With shp.TextFrame.TextRange.Font
+                                .Name = "Aptos Display"
+                                .Size = 24
+                                .Bold = True
+                                .Color.RGB = RGB(31, 55, 86)
+                            End With
+                            
+                        Else
+                            
+                            With shp.TextFrame.TextRange.Font
+                                .Name = "Aptos"
+                                .Size = 16
+                                .Color.RGB = RGB(55, 55, 55)
+                            End With
+                            
+                        End If
+                        
+                    End If
+                    
+                End If
+                
+                '-----------------------------------------
+                ' Table formatting
+                '-----------------------------------------
+                If shp.HasTable Then
+                    
+                    Dim r As Long
+                    Dim c As Long
+                    
+                    For r = 1 To shp.Table.Rows.Count
+                        For c = 1 To shp.Table.Columns.Count
+                            
+                            With shp.Table.Cell(r, c).Shape.TextFrame.TextRange.Font
+                                .Name = "Aptos"
+                                .Size = 11
+                                .Color.RGB = RGB(55, 55, 55)
+                            End With
+                            
+                            'Header row
+                            If r = 1 Then
+                                With shp.Table.Cell(r, c).Shape.Fill
+                                    .ForeColor.RGB = RGB(31, 55, 86)
+                                End With
+                                
+                                With shp.Table.Cell(r, c).Shape.TextFrame.TextRange.Font
+                                    .Color.RGB = RGB(255, 255, 255)
+                                    .Bold = True
+                                End With
+                            End If
+                            
+                        Next c
+                    Next r
+                    
+                End If
+                
+            End If
+            
+        Next shp
+        
+        '-----------------------------------------
+        ' 3. Add footer
+        '-----------------------------------------
+        AddCorporateFooter sld
+        
+    Next sld
+    
+    MsgBox "Corporate formatting applied successfully.", _
+           vbInformation, "Corporate PPT Formatter"
+
+End Sub
+
+
+Sub AddCorporateFooter(ByVal sld As Slide)
+
+    Dim footer As Shape
+    Dim slideNo As Shape
+    
+    '-----------------------------------------
+    ' Footer text
+    '-----------------------------------------
+    Set footer = sld.Shapes.AddTextbox( _
+                    Orientation:=msoTextOrientationHorizontal, _
+                    Left:=25, _
+                    Top:=515, _
+                    Width:=500, _
+                    Height:=20)
+    
+    With footer.TextFrame.TextRange
+        .Text = "Confidential | Corporate Presentation | 2026"
+        .Font.Name = "Aptos"
+        .Font.Size = 8
+        .Font.Color.RGB = RGB(120, 120, 120)
+    End With
+    
+    footer.Line.Visible = msoFalse
+    footer.Fill.Visible = msoFalse
+    
+    '-----------------------------------------
+    ' Slide number
+    '-----------------------------------------
+    Set slideNo = sld.Shapes.AddTextbox( _
+                    Orientation:=msoTextOrientationHorizontal, _
+                    Left:=680, _
+                    Top:=515, _
+                    Width:=40, _
+                    Height:=20)
+    
+    With slideNo.TextFrame.TextRange
+        .Text = CStr(sld.SlideIndex)
+        .Font.Name = "Aptos"
+        .Font.Size = 8
+        .Font.Color.RGB = RGB(120, 120, 120)
+    End With
+    
+    slideNo.TextFrame.TextRange.ParagraphFormat.Alignment = ppAlignRight
+    
+    slideNo.Line.Visible = msoFalse
+    slideNo.Fill.Visible = msoFalse
+
+End Sub
